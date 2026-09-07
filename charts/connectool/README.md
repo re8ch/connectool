@@ -14,6 +14,11 @@ plugins on desktops, or store OAuth tokens. All endpoints, namespaces, registry
 sources, publications, authorization policies, marketplace coordinates, and
 optional ToolHive Registry settings are values-controlled.
 
+`toolhive.placement.nodeSelector` is the single placement contract inherited by
+every publication. Publications default to one replica: colocated replicas are
+not node-level high availability. Referenced MCP workload owners must apply the
+same placement boundary to their own pod templates.
+
 ```sh
 helm lint . -f examples/example-values.yaml
 helm template connectool . -n connectool -f examples/example-values.yaml

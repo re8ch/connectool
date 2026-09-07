@@ -5,6 +5,8 @@ dex:
   contract: {enabled: true, namespace: identity-system, configMapName: connectool-oidc-clients}
 toolhive:
   namespace: toolhive-system
+  placement:
+    nodeSelector: {kubernetes.io/os: linux}
   registry:
     enabled: true
     name: approved
@@ -21,6 +23,7 @@ toolhive:
       resourceUrl: https://tools.example.com/mcp
       group: platform-tools
       createGroup: true
+      replicas: 1
       workloads:
         - {name: observe, toolConfigRef: observe-tools}
       authorization:

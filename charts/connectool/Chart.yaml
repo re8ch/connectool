@@ -2,7 +2,7 @@ apiVersion: v2
 name: connectool
 description: ConnecTool packages Dex authentication, ToolHive MCP/Skill distribution, and Codex plugin registration.
 type: application
-version: 0.2.2
+version: 0.2.3
 appVersion: "1.0"
 kubeVersion: ">=1.30.0-0"
 home: https://github.com/re8ch/connectool
@@ -17,6 +17,10 @@ annotations:
   artifacthub.io/containsSecurityUpdates: "false"
   artifacthub.io/prerelease: "false"
   artifacthub.io/changes: |
+    - kind: changed
+      description: Default publications to one replica and inherit one global placement contract.
+    - kind: added
+      description: Render global node selection into every VirtualMCPServer pod template.
     - kind: changed
       description: Sign the public GHCR artifact with GitHub OIDC for Flux verification.
     - kind: added

@@ -34,8 +34,14 @@ metadata:
     {{- include "connectool.labels" $ | nindent 4 }}
 spec:
   groupRef: {name: {{ $publication.group }}}
-  replicas: {{ default 2 $publication.replicas }}
+  replicas: {{ default 1 $publication.replicas }}
   sessionAffinity: None
+  {{- with $.Values.toolhive.placement.nodeSelector }}
+  podTemplateSpec:
+    spec:
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
   {{- if $.Values.toolhive.sessionStorage.address }}
   sessionStorage:
     provider: redis
