@@ -10,14 +10,30 @@ and Codex marketplace/plugin metadata. Skills are distributed by a Git-backed
 marketplace; ToolHive distributes MCP capabilities.
 
 The chart does not install an identity provider, mutate its Secret, install
-plugins on desktops, or store OAuth tokens. All endpoints, namespaces, registry
-sources, publications, authorization policies, marketplace coordinates, and
-optional ToolHive Registry settings are values-controlled.
+plugins on desktops, or store OAuth tokens. It can optionally publish the
+generated marketplace, plugin, MCP, and Skill files into a Git repository. Each
+managed plugin directory is rebuilt from the values contract, while unrelated
+repository files are preserved. Credentials must be supplied through a
+pre-existing Secret. All endpoints, namespaces, registry sources,
+publications, authorization policies, marketplace coordinates, and optional
+ToolHive Registry settings are values-controlled.
+
+Each publication may pass a `podTemplateSpec` to its `VirtualMCPServer`, for
+example to select a node with the required network path to an external issuer.
 
 ```sh
 helm lint . -f examples/example-values.yaml
 helm template connectool . -n connectool -f examples/example-values.yaml
 ```
+
+To enable Git publication, set `codex.marketplace.publisher.enabled`, use the
+same HTTPS repository for `source` and `publisher.repository`, provide a
+least-privilege credential Secret, and select a digest-pinned image containing
+`git`, `jq`, and CA certificates. The publisher validates every generated JSON
+file, checks the staged diff, pushes atomically, and verifies the remote head.
+Marketplace publication is name-aware: ConnecTool replaces entries and complete
+directories for plugin names declared in `codex.plugins`, while preserving all
+unrelated marketplace entries and repository files.
 
 ## Public delivery
 

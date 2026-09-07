@@ -36,6 +36,10 @@ spec:
   groupRef: {name: {{ $publication.group }}}
   replicas: {{ default 2 $publication.replicas }}
   sessionAffinity: None
+  {{- with $publication.podTemplateSpec }}
+  podTemplateSpec:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   {{- if $.Values.toolhive.sessionStorage.address }}
   sessionStorage:
     provider: redis

@@ -12,3 +12,15 @@
   {{- end }}
   {{- if ne (int $matches) 1 }}{{ fail (printf "Codex plugin %q must reference exactly one ToolHive publication; got %v" $plugin.name $matches) }}{{ end }}
 {{- end }}
+{{- if .Values.codex.marketplace.publisher.enabled }}
+  {{- if not .Values.codex.marketplace.publisher.repository }}{{ fail "codex.marketplace.publisher.repository is required when the publisher is enabled" }}{{ end }}
+  {{- if not .Values.codex.marketplace.publisher.secretRef.name }}{{ fail "codex.marketplace.publisher.secretRef.name is required when the publisher is enabled" }}{{ end }}
+  {{- if ne .Values.codex.marketplace.source .Values.codex.marketplace.publisher.repository }}{{ fail "codex.marketplace.source must equal codex.marketplace.publisher.repository when the publisher is enabled" }}{{ end }}
+{{- end }}
+{{- range $plugin := .Values.codex.plugins }}
+  {{- if not (semver $plugin.version) }}{{ fail (printf "Codex plugin %q version must be valid semver" $plugin.name) }}{{ end }}
+  {{- range $skill := $plugin.skills }}
+    {{- if not (hasPrefix "skills/" $skill.path) }}{{ fail (printf "Codex plugin %q skill path must be below skills/" $plugin.name) }}{{ end }}
+    {{- if contains ".." $skill.path }}{{ fail (printf "Codex plugin %q skill path must not contain .." $plugin.name) }}{{ end }}
+  {{- end }}
+{{- end }}

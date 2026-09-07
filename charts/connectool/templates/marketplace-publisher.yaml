@@ -1,0 +1,195 @@
+{{- if .Values.codex.marketplace.publisher.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-marketplace-publisher" .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "connectool.labels" . | nindent 4 }}
+data:
+  publish.sh: |
+    #!/bin/sh
+    set -eu
+
+    askpass_dir="$(mktemp -d)"
+    work_dir="$(mktemp -d)"
+    trap 'rm -rf "$askpass_dir" "$work_dir"' EXIT
+    cat >"$askpass_dir/askpass" <<'EOF'
+    #!/bin/sh
+    case "$1" in
+      *Username*) printf '%s\n' "$GIT_USERNAME" ;;
+      *) printf '%s\n' "$GIT_TOKEN" ;;
+    esac
+    EOF
+    chmod 700 "$askpass_dir/askpass"
+    export GIT_ASKPASS="$askpass_dir/askpass"
+    export GIT_TERMINAL_PROMPT=0
+
+    set +e
+    git ls-remote --exit-code --heads "$GIT_REPOSITORY" "refs/heads/$GIT_BRANCH" >"$work_dir/remote-head"
+    remote_status=$?
+    set -e
+    case "$remote_status" in
+      0) git clone --depth 1 --branch "$GIT_BRANCH" "$GIT_REPOSITORY" "$work_dir/repository" ;;
+      2)
+        git -C "$work_dir" init repository
+        git -C "$work_dir/repository" checkout -b "$GIT_BRANCH"
+        git -C "$work_dir/repository" remote add origin "$GIT_REPOSITORY"
+        ;;
+      *) echo "cannot reach marketplace repository" >&2; exit 69 ;;
+    esac
+
+    repository="$work_dir/repository"
+    test -x "$(command -v git)"
+    test -x "$(command -v jq)"
+    jq -e '.name and (.plugins | type == "array")' /contract/marketplace.json >/dev/null
+    mkdir -p "$repository/.agents/plugins"
+    marketplace="$repository/.agents/plugins/marketplace.json"
+    if [ -f "$marketplace" ]; then
+      # ConnecTool owns only the plugin names present in its generated contract.
+      # Preserve all other entries so one organization marketplace can also
+      # distribute external or hand-maintained plugins.
+      jq -s '
+        .[0] as $existing | .[1] as $generated |
+        ($generated.plugins | map(.name)) as $managed |
+        $generated + {
+          plugins: (
+            (($existing.plugins // []) |
+              map(select(.name as $name | ($managed | index($name) | not))))
+            + $generated.plugins
+          )
+        }
+      ' "$marketplace" /contract/marketplace.json >"$marketplace.next"
+      mv "$marketplace.next" "$marketplace"
+    else
+      jq . /contract/marketplace.json >"$marketplace"
+    fi
+
+    for manifest in /contract/*.plugin.json; do
+      [ -e "$manifest" ] || continue
+      plugin="$(basename "$manifest" .plugin.json)"
+      if [ -f "$repository/plugins/$plugin/.codex-plugin/plugin.json" ]; then
+        jq -r '.version // empty' "$repository/plugins/$plugin/.codex-plugin/plugin.json" >"$work_dir/$plugin.old-version"
+      fi
+      if [ -f "$repository/plugins/$plugin/.contract.sha256" ]; then
+        cp "$repository/plugins/$plugin/.contract.sha256" "$work_dir/$plugin.old-contract-sha256"
+      fi
+      rm -rf "$repository/plugins/$plugin"
+      mkdir -p "$repository/plugins/$plugin/.codex-plugin"
+      cp "$manifest" "$repository/plugins/$plugin/.codex-plugin/plugin.json"
+      jq -e --arg plugin "$plugin" '.name == $plugin and .version and .interface' "$manifest" >/dev/null
+      if [ -f "/contract/$plugin.mcp.json" ]; then
+        cp "/contract/$plugin.mcp.json" "$repository/plugins/$plugin/.mcp.json"
+        jq -e --arg plugin "$plugin" '.mcpServers[$plugin].type == "http" and .mcpServers[$plugin].oauth.clientId' "/contract/$plugin.mcp.json" >/dev/null
+      fi
+    done
+
+    tab="$(printf '\t')"
+    while IFS="$tab" read -r plugin source destination; do
+      [ -n "$plugin" ] || continue
+      case "$destination" in skills/*/SKILL.md) ;; *) echo "invalid skill destination: $destination" >&2; exit 65 ;; esac
+      case "$destination" in *..*) echo "unsafe skill destination: $destination" >&2; exit 65 ;; esac
+      mkdir -p "$repository/plugins/$plugin/$(dirname "$destination")"
+      cp "/contract/$source" "$repository/plugins/$plugin/$destination"
+    done </contract/skills.tsv
+
+    for manifest in /contract/*.plugin.json; do
+      [ -e "$manifest" ] || continue
+      plugin="$(basename "$manifest" .plugin.json)"
+      contract_hash="$(cd "$repository/plugins/$plugin" && find . -type f ! -name .contract.sha256 -print | sort | while IFS= read -r file; do sha256sum "$file"; done | sha256sum | cut -d' ' -f1)"
+      new_version="$(jq -r '.version' "$manifest")"
+      old_version="$(cat "$work_dir/$plugin.old-version" 2>/dev/null || true)"
+      old_contract_hash="$(cat "$work_dir/$plugin.old-contract-sha256" 2>/dev/null || true)"
+      if [ -n "$old_contract_hash" ] && [ "$old_contract_hash" != "$contract_hash" ] && [ "$old_version" = "$new_version" ]; then
+        echo "plugin $plugin contract changed without a version bump ($new_version)" >&2
+        exit 65
+      fi
+      printf '%s\n' "$contract_hash" >"$repository/plugins/$plugin/.contract.sha256"
+    done
+
+    while IFS="$tab" read -r plugin source destination; do
+      [ -n "$plugin" ] || continue
+      test -s "$repository/plugins/$plugin/$destination"
+    done </contract/skills.tsv
+
+    git -C "$repository" config user.name "$GIT_AUTHOR_NAME"
+    git -C "$repository" config user.email "$GIT_AUTHOR_EMAIL"
+    git -C "$repository" add .agents/plugins/marketplace.json plugins
+    git -C "$repository" diff --cached --check
+    if git -C "$repository" diff --cached --quiet; then
+      echo "Marketplace is already current"
+      exit 0
+    fi
+    git -C "$repository" commit -m "Publish ConnecTool marketplace"
+    git -C "$repository" push origin "HEAD:$GIT_BRANCH"
+    remote_head="$(git -C "$repository" ls-remote origin "refs/heads/$GIT_BRANCH" | cut -f1)"
+    test "$remote_head" = "$(git -C "$repository" rev-parse HEAD)"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ printf "%s-marketplace-publisher" .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "connectool.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.codex.marketplace.publisher.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "connectool.labels" . | nindent 12 }}
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: publisher
+              image: {{ .Values.codex.marketplace.publisher.image | quote }}
+              imagePullPolicy: IfNotPresent
+              command: [/bin/sh, /publisher/publish.sh]
+              env:
+                - name: GIT_REPOSITORY
+                  value: {{ .Values.codex.marketplace.publisher.repository | quote }}
+                - name: GIT_BRANCH
+                  value: {{ .Values.codex.marketplace.publisher.branch | quote }}
+                - name: GIT_AUTHOR_NAME
+                  value: {{ .Values.codex.marketplace.publisher.author.name | quote }}
+                - name: GIT_AUTHOR_EMAIL
+                  value: {{ .Values.codex.marketplace.publisher.author.email | quote }}
+                - name: GIT_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.codex.marketplace.publisher.secretRef.name | quote }}
+                      key: {{ .Values.codex.marketplace.publisher.secretRef.usernameKey | quote }}
+                - name: GIT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.codex.marketplace.publisher.secretRef.name | quote }}
+                      key: {{ .Values.codex.marketplace.publisher.secretRef.tokenKey | quote }}
+              resources:
+                requests: {cpu: 10m, memory: 32Mi}
+                limits: {cpu: 100m, memory: 128Mi}
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - {name: contract, mountPath: /contract, readOnly: true}
+                - {name: publisher, mountPath: /publisher, readOnly: true}
+          volumes:
+            - name: contract
+              configMap:
+                name: {{ printf "%s-codex-plugins" .Release.Name }}
+            - name: publisher
+              configMap:
+                name: {{ printf "%s-marketplace-publisher" .Release.Name }}
+                defaultMode: 0555
+{{- end }}

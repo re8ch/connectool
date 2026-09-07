@@ -2,7 +2,7 @@ apiVersion: v2
 name: connectool
 description: ConnecTool packages Dex authentication, ToolHive MCP/Skill distribution, and Codex plugin registration.
 type: application
-version: 0.2.2
+version: 0.4.0
 appVersion: "1.0"
 kubeVersion: ">=1.30.0-0"
 home: https://github.com/re8ch/connectool
@@ -17,6 +17,16 @@ annotations:
   artifacthub.io/containsSecurityUpdates: "false"
   artifacthub.io/prerelease: "false"
   artifacthub.io/changes: |
+    - kind: fixed
+      description: Preserve external plugin entries while publishing managed marketplace plugins.
+    - kind: changed
+      description: Publish complete plugin contracts, including generated skills, from one source of truth.
+    - kind: security
+      description: Require digest-pinned publisher images and validate generated artifacts before push.
+    - kind: added
+      description: Optional Git-backed Codex marketplace publisher and VirtualMCPServer pod placement.
+    - kind: added
+      description: Generated Codex MCP startup timeout configuration.
     - kind: changed
       description: Sign the public GHCR artifact with GitHub OIDC for Flux verification.
     - kind: added

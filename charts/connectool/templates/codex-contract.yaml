@@ -30,13 +30,32 @@ data:
       - name: {{ $plugin.name | quote }}
         publication: {{ $plugin.publication | quote }}
         mcpOwner: {{ $plugin.mcpOwner }}
-        skills: {{ $plugin.skills | toJson }}
+        skills:
+        {{- range $skill := $plugin.skills }}
+          - {{ $skill.path | quote }}
+        {{- end }}
     {{- end }}
   {{- range $plugin := .Values.codex.plugins }}
   {{- if $plugin.mcpOwner }}
-  {{ $publication := dict }}
+  {{- $publication := dict }}
   {{- range $.Values.toolhive.publications }}{{ if eq .name $plugin.publication }}{{ $publication = . }}{{ end }}{{ end }}
   {{ printf "%s.mcp.json" $plugin.name }}: |
-    {{ dict "mcpServers" (dict $plugin.name (dict "type" "http" "url" $publication.resourceUrl "oauth" (dict "clientId" $publication.clientId) "scopes" $.Values.global.scopes)) | toJson }}
+    {{- dict "mcpServers" (dict $plugin.name (dict "type" "http" "url" $publication.resourceUrl "oauth" (dict "clientId" $publication.clientId) "scopes" $.Values.global.scopes "startup_timeout_sec" (default 60 $plugin.startupTimeoutSeconds))) | toJson | nindent 4 }}
   {{- end }}
+  {{- $interface := dict "displayName" (default $plugin.name $plugin.displayName) "shortDescription" (default (printf "%s tools" $plugin.name) $plugin.description) "longDescription" (default (printf "Connects Codex to the %s ConnecTool publication." $plugin.publication) $plugin.description) "developerName" (default "ConnecTool" $plugin.developerName) "category" (default "Productivity" $plugin.category) "capabilities" (default (list) $plugin.capabilities) "defaultPrompt" (default (printf "Use %s when relevant." $plugin.name) $plugin.defaultPrompt) }}
+  {{- $manifest := dict "name" $plugin.name "version" (default "0.1.0" $plugin.version) "description" (default (printf "%s plugin" $plugin.name) $plugin.description) "author" (dict "name" (default "ConnecTool" $plugin.developerName)) "interface" $interface }}
+  {{- if $plugin.mcpOwner }}{{ $_ := set $manifest "mcpServers" "./.mcp.json" }}{{ end }}
+  {{- if gt (len $plugin.skills) 0 }}{{ $_ := set $manifest "skills" "./skills/" }}{{ end }}
+  {{ printf "%s.plugin.json" $plugin.name }}: |
+    {{- $manifest | toJson | nindent 4 }}
+  {{- range $skillIndex, $skill := $plugin.skills }}
+  {{ printf "%s.skill.%d.md" $plugin.name $skillIndex }}: |
+    {{- $skill.content | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  skills.tsv: |
+  {{- range $plugin := .Values.codex.plugins }}
+    {{- range $skillIndex, $skill := $plugin.skills }}
+    {{ $plugin.name }}{{ "\t" }}{{ printf "%s.skill.%d.md" $plugin.name $skillIndex }}{{ "\t" }}{{ $skill.path }}
+    {{- end }}
   {{- end }}

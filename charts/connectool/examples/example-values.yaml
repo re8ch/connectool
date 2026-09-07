@@ -34,6 +34,16 @@ codex:
   plugins:
     - name: platform-tool
       publication: platform-tools
+      version: 1.0.0
       category: Productivity
       mcpOwner: true
-      skills: [skills/platform/SKILL.md]
+      skills:
+        - path: skills/platform/SKILL.md
+          content: |
+            ---
+            name: platform
+            description: Inspect the example platform through its authenticated MCP gateway.
+            ---
+            # Platform
+
+            Use this skill for read-only platform inspection.

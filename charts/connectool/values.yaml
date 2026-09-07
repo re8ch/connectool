@@ -43,6 +43,21 @@ codex:
     name: connectool
     displayName: ConnecTool
     source: https://github.com/example/codex-plugins.git
+    publisher:
+      enabled: false
+      repository: ""
+      branch: main
+      schedule: "*/5 * * * *"
+      # The image must contain git, jq, and the system CA bundle. Pin a digest
+      # in production; the publisher never installs packages at runtime.
+      image: alpine/git:2.47.2
+      secretRef:
+        name: ""
+        usernameKey: username
+        tokenKey: token
+      author:
+        name: ConnecTool Publisher
+        email: connectool@example.com
   plugins: []
   # Exactly one plugin may own each publication's MCP registration. Skill-only
   # plugins reference the owner and therefore do not render duplicate servers.
@@ -50,9 +65,18 @@ codex:
   #   publication: platform-tools
   #   category: Productivity
   #   mcpOwner: true
-  #   skills: [skills/platform/SKILL.md]
+  #   skills:
+  #     - path: skills/platform/SKILL.md
+  #       content: |
+  #         ---
+  #         name: platform
+  #         description: Inspect the platform.
+  #         ---
+  #         # Platform
   # - name: cluster-operations
   #   publication: platform-tools
   #   category: Developer Tools
   #   mcpOwner: false
-  #   skills: [skills/cluster/SKILL.md]
+  #   skills:
+  #     - path: skills/cluster/SKILL.md
+  #       content: "..."
