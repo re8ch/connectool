@@ -17,6 +17,19 @@ workloads, policies, marketplace source, and plugin-to-publication ownership.
 It does not own identity-provider installation, Secret mutation, OAuth tokens,
 desktop installation, network publication, or the MCP workload implementations.
 
+## Placement and availability
+
+Every publication inherits the single `toolhive.placement` contract. Placement
+is rendered into the `VirtualMCPServer` pod template so an operator reconcile
+cannot discard it. Referenced MCP workloads remain owned by their workload
+manifests and must use the same application placement boundary.
+
+ConnecTool defaults publications to one replica. Multiple replicas on one node
+provide only process redundancy and must never be described as high
+availability. Do not combine single-node placement with required pod
+anti-affinity. Node-level HA requires independent, health-gated origins before
+replicas are distributed across failure domains.
+
 ## Distribution
 
 The canonical chart is public at:

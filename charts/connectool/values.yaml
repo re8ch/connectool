@@ -12,6 +12,10 @@ dex:
 
 toolhive:
   namespace: toolhive-system
+  # One placement contract applies to every publication. A publication cannot
+  # silently escape the application's scheduling boundary.
+  placement:
+    nodeSelector: {}
   registry:
     enabled: true
     name: approved
@@ -31,6 +35,7 @@ toolhive:
   #   resourceUrl: https://tools.example.com/mcp
   #   group: platform-tools
   #   createGroup: true
+  #   replicas: 1
   #   workloads:
   #     - {name: observe, toolConfigRef: observe-tools}
   #   authorization:
