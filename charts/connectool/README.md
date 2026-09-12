@@ -29,7 +29,7 @@ helm template connectool . -n connectool -f examples/example-values.yaml
 The canonical OCI artifact is:
 
 ```text
-oci://ghcr.io/re8ch/charts/connectool
+oci://ghcr.io/among-clusters/charts/connectool
 ```
 
 The GitHub release tag is `v<Chart.yaml version>`. GitHub Actions validates,

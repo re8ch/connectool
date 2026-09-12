@@ -35,7 +35,7 @@ replicas are distributed across failure domains.
 The canonical chart is public at:
 
 ```text
-oci://ghcr.io/re8ch/charts/connectool
+oci://ghcr.io/among-clusters/charts/connectool
 ```
 
 An adopter may mirror the artifact to any OCI registry. A mirror is an optional
