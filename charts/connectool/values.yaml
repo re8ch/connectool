@@ -42,6 +42,13 @@ toolhive:
   #     groupClaim: groups
   #     policies: ['permit(principal, action, resource);']
   #   session: {database: 1, keyPrefix: "thv:tools:"}
+  #   outgoingAuth:
+  #     source: inline
+  #     default: {type: discovered}
+  #     backends:
+  #       observe: {type: externalAuthConfigRef, externalAuthConfigRef: {name: internal-backend}}
+  #   operational:
+  #     failureHandling: {partialFailureMode: best_effort, healthCheckInterval: 30s}
 
 codex:
   marketplace:
