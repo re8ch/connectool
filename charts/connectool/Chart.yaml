@@ -5,12 +5,12 @@ type: application
 version: 0.2.3
 appVersion: "1.0"
 kubeVersion: ">=1.30.0-0"
-home: https://github.com/re8ch/connectool
-sources: [https://github.com/re8ch/connectool]
+home: https://github.com/among-clusters/connectool
+sources: [https://github.com/among-clusters/connectool]
 keywords: [connectool, dex, toolhive, mcp, codex, skills, registry]
 maintainers:
   - name: ConnecTool maintainers
-    url: https://github.com/re8ch/connectool
+    url: https://github.com/among-clusters/connectool
 annotations:
   artifacthub.io/category: ai-machine-learning
   artifacthub.io/license: Apache-2.0
@@ -31,6 +31,6 @@ annotations:
       description: Codex marketplace metadata with a single MCP owner and reusable Skill-only plugins.
   artifacthub.io/links: |
     - name: source
-      url: https://github.com/re8ch/connectool
+      url: https://github.com/among-clusters/connectool
     - name: support
-      url: https://github.com/re8ch/connectool/issues
+      url: https://github.com/among-clusters/connectool/issues
