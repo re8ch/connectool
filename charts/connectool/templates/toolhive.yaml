@@ -65,7 +65,11 @@ spec:
         policies:
           {{- toYaml $publication.authorization.policies | nindent 10 }}
   outgoingAuth:
+    {{- if $publication.outgoingAuth }}
+    {{- toYaml $publication.outgoingAuth | nindent 4 }}
+    {{- else }}
     default: {type: discovered}
+    {{- end }}
   config:
     aggregation:
       conflictResolution: prefix
@@ -77,9 +81,13 @@ spec:
           toolConfigRef: {name: {{ . }}}
           {{- end }}
         {{- end }}
+    {{- with $publication.operational }}
+    operational:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
     audit:
-      enabled: true
-      component: {{ $publication.name | quote }}
-      includeRequestData: false
-      includeResponseData: false
+      enabled: {{ dig "enabled" true (default dict $publication.audit) }}
+      component: {{ dig "component" $publication.name (default dict $publication.audit) | quote }}
+      includeRequestData: {{ dig "includeRequestData" false (default dict $publication.audit) }}
+      includeResponseData: {{ dig "includeResponseData" false (default dict $publication.audit) }}
 {{- end }}

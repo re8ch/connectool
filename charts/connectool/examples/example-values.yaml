@@ -26,6 +26,18 @@ toolhive:
       replicas: 1
       workloads:
         - {name: observe, toolConfigRef: observe-tools}
+      outgoingAuth:
+        source: inline
+        default: {type: discovered}
+        backends:
+          observe: {type: externalAuthConfigRef, externalAuthConfigRef: {name: internal-backend}}
+      operational:
+        failureHandling:
+          partialFailureMode: best_effort
+          healthCheckInterval: 30s
+          healthCheckTimeout: 10s
+          unhealthyThreshold: 3
+          circuitBreaker: {enabled: true, failureThreshold: 5, timeout: 1m}
       authorization:
         groupClaim: groups
         policies: ['permit(principal, action, resource);']
